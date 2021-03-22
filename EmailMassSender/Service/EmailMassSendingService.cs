@@ -128,7 +128,7 @@ namespace EmailMassSender.Service
 
             var useGroups = defaultGroups == "*"
                 ? new List<string>()
-                : defaultGroups.Split(defaultGroups.Trim()).ToList();
+                : defaultGroups.Trim().Split(";").ToList();
             
             foreach (var kvp in _configuration.Groups)
             {
