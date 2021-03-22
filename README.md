@@ -5,13 +5,8 @@ Email Mass sender.
 Read [EULA](./EULA.txt).
 
 # Pre-requesties
-## Windows
-Install Microsoft .NET 5.0.4:  
-https://dotnet.microsoft.com/download/dotnet/thank-you/runtime-5.0.4-windows-x64-installer
-
-## Linux
-Follow instructions:  
-https://docs.microsoft.com/en-us/dotnet/core/install/linux
+Install Microsoft .NET 5.0.4 for your OS:  
+https://dotnet.microsoft.com/download/dotnet/5.0
 
 # Build and run
 Open cmd shell int `EmailMassSenderSln` directory and type:
@@ -31,6 +26,10 @@ Open `usersettings.json`.
 Configure `Groups`. Close file.
 
 Just run `ems.exe` (or run `./dotnet ems.dll` for Linux).
+
+# Consume
+
+Read [instructions](./EmailMassSender/README.md). 
 
 # Credits
 Created by Kalianov Dmitry (https://chebura.github.io, http://mrald.narod.ru)
