@@ -34,5 +34,7 @@ namespace EmailMassSender.Configuration
         public string TasksPath { get; set; }
 
         public TimeSpan? DelayBetweenSendsInThread { get; set; }
+
+        public string UserSettingsFilePath { get; set; }
     }
 }

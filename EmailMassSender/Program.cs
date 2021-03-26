@@ -29,7 +29,6 @@ namespace EmailMassSender
                 var configurationBuilder = new ConfigurationBuilder()
                     .SetBasePath(Directory.GetCurrentDirectory())
                     .AddJsonFile("appsettings.json", false, false)
-                    .AddJsonFile("usersettings.json", true, true)
                     .AddCommandLine(args);
 
                 var configBuilt = configurationBuilder
@@ -39,6 +38,11 @@ namespace EmailMassSender
 
                 loggerFactory = LoggerFactory.Create((builder) =>
                     builder.AddConfiguration(configBuilt.GetSection("Logging")).AddConsole());
+
+                var configBuilder2 = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory())
+                    .AddJsonFile(configuration.UserSettingsFilePath ?? "usersettings.json", false, false);
+
+                configBuilder2.Build().Bind(configuration);
             }
             catch (Exception e)
             {

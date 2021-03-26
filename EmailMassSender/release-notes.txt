@@ -1,0 +1,2 @@
+﻿1.0.3
+	+ Добавлена возможность указывать путь к файлу "usersettings.json" через параметр appsettings.json:UserSettingsFilePath
