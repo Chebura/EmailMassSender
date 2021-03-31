@@ -15,6 +15,13 @@ dotnet restore
 dotnet build
 
 cd $env:USERPROFILE
-mkdir "./.chebura/bin/1.0.3"
+copy "./.chebura/bin/EmailMassSender/appsettings.json" "./.chebura/update" 
+copy "./.chebura/bin/EmailMassSender/usersettings.json" "./.chebura/update" 
 
-copy "./.chebura/update/expanded/EmailMassSender-main/EmailMassSender/bin/Debug/net5.0/*.*" "./.chebura/bin/1.0.3"
+rm "./.chebura/bin/EmailMassSender" -Force -Recurse
+mkdir "./.chebura/bin/EmailMassSender" -Force
+
+copy "./.chebura/update/expanded/EmailMassSender-main/EmailMassSender/bin/Debug/net5.0/*.*" "./.chebura/bin/EmailMassSender"
+
+copy "./.chebura/update/appsettings.json" "./.chebura/bin/EmailMassSender"
+copy "./.chebura/update/usersettings.json" "./.chebura/bin/EmailMassSender"
