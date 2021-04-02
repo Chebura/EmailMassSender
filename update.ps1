@@ -1,3 +1,10 @@
+/*
+  https://github.com/Chebura/EmailMassSender/edit/main/update.ps1
+  EmailMassSender update script
+  PowerShell
+  By Kalianov Dmitry (mrald@yandex.ru)
+*/
+
 cd $env:USERPROFILE
 mkdir ./.chebura/update/ -Force
 cd ./.chebura/update/
