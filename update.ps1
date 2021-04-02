@@ -1,5 +1,5 @@
 /*
-  https://github.com/Chebura/EmailMassSender/edit/main/update.ps1
+  https://github.com/Chebura/EmailMassSender/blob/main/update.ps1
   EmailMassSender update script
   PowerShell
   By Kalianov Dmitry (mrald@yandex.ru)
