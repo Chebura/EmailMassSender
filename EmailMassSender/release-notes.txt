@@ -1,2 +1,4 @@
-﻿1.0.3
+﻿1.0.4
+	+ Поддержана .net 6.0, обновлены nuget-пакеты
+1.0.3
 	+ Добавлена возможность указывать путь к файлу "usersettings.json" через параметр appsettings.json:UserSettingsFilePath
