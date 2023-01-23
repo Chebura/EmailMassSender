@@ -26,7 +26,7 @@ namespace EmailMassSender.Service
         public EmailMassSendingService(RootConfiguration configuration, ILogger logger)
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-            
+
             if (_configuration.Threads <= 0)
                 _configuration.Threads = 1;
 
@@ -44,6 +44,8 @@ namespace EmailMassSender.Service
 
         public async Task SendAsync(CancellationToken cancellationToken)
         {
+            _logger.LogDebug("Default group `{0}` passed.", _configuration.DefaultGroups);
+
             var tasks = await GetTasksListAsync(_configuration.DefaultGroups ?? "*", cancellationToken);
 
             if (!(tasks?.Any() ?? false))
@@ -56,7 +58,7 @@ namespace EmailMassSender.Service
                 throw new InvalidOperationException("There are no SmtpClient object in configuration. Sending failed.");
 
             _logger.LogDebug($"Start processing tasks at {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss tt zz}");
-            
+
             try
             {
                 while (!cancellationToken.IsCancellationRequested)
@@ -93,7 +95,7 @@ namespace EmailMassSender.Service
             {
                 _logger.LogError(ex, "Overall loop error");
             }
-            
+
             _logger.LogDebug($"End processing tasks at {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss tt zz}");
 
 
@@ -129,12 +131,17 @@ namespace EmailMassSender.Service
             var useGroups = defaultGroups == "*"
                 ? new List<string>()
                 : defaultGroups.Trim().Split(";").ToList();
-            
+
             foreach (var kvp in _configuration.Groups)
             {
-                if (useGroups.Any() && !useGroups.Any(x=>string.Equals(x, kvp.Key, StringComparison.OrdinalIgnoreCase)))
+                if (useGroups.Any() &&
+                    !useGroups.Any(x => string.Equals(x, kvp.Key, StringComparison.OrdinalIgnoreCase)))
+                {
                     continue;
-                
+                }
+
+                _logger.LogDebug($"Group `{kvp.Key}` matched.");
+
                 try
                 {
                     var groupOfTasks = await PrepareGroupOfTasksAsync(kvp.Key, kvp.Value, _configuration.ResetTasks,
@@ -167,9 +174,9 @@ namespace EmailMassSender.Service
             var hex = Convert.ToHexString(md5.ComputeHash(buffer));
 
             var taskDir = _configuration.TasksPath ?? string.Empty;
-            
+
             var taskId = $"{groupId}_{hex}.task";
-            
+
             var taskPath = Path.Combine(taskDir, taskId);
 
             if (!Directory.Exists(taskDir))
@@ -179,7 +186,8 @@ namespace EmailMassSender.Service
                 if (_configuration.DeleteObsoleteTasks)
                 {
                     var lifetime = _configuration.TaskFileLifetime ?? TimeSpan.FromDays(1);
-                    foreach (var taskFileForDelete in Directory.GetFiles(taskDir, "*.task", SearchOption.TopDirectoryOnly))
+                    foreach (var taskFileForDelete in Directory.GetFiles(taskDir, "*.task",
+                                 SearchOption.TopDirectoryOnly))
                     {
                         var fi = new FileInfo(taskFileForDelete);
                         if (DateTime.Compare(fi.CreationTimeUtc.Add(lifetime), DateTime.UtcNow) < 0)
@@ -188,9 +196,9 @@ namespace EmailMassSender.Service
                             _logger.LogDebug($"Task file `{taskFileForDelete}` was deleted as obsolete.");
                         }
                     }
-                } 
+                }
             }
-            
+
             if (File.Exists(taskPath))
             {
                 if (!force)
@@ -200,7 +208,7 @@ namespace EmailMassSender.Service
                         FileShare.None);
                     return new EmailMassSendingTaskContext(taskId, taskFs, buffer, groupConfiguration);
                 }
-                
+
                 File.Delete(taskPath);
             }
 
@@ -252,7 +260,8 @@ namespace EmailMassSender.Service
         }
 
 
-        private async Task<EmailMassSendingTaskContext> ProcessTaskAsync(EmailMassSendingTaskContext context, CancellationToken cancellationToken)
+        private async Task<EmailMassSendingTaskContext> ProcessTaskAsync(EmailMassSendingTaskContext context,
+            CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -264,7 +273,7 @@ namespace EmailMassSender.Service
 
             var taskList = JsonConvert.DeserializeObject<EmailMassSendingTask>(Encoding.UTF8.GetString(buffer));
 
-            var taskItems = taskList.Items ?? new List<EmailMassSendingTaskItem>();
+            var taskItems = taskList!.Items ?? new List<EmailMassSendingTaskItem>();
 
             var allTaskItems = taskItems;
 
@@ -313,7 +322,7 @@ namespace EmailMassSender.Service
             context.Total = taskItems.Count;
             context.Sent = taskItems.Count(x => x.Attempt != null && !x.Failed);
             context.Failed = context.Total - context.Sent;
-            
+
             return context;
         }
 
@@ -353,7 +362,7 @@ namespace EmailMassSender.Service
 
             //using var client = new SmtpClient()
 
-            var scope = _logger.BeginScope(context.TaskId);
+            using var scope = _logger.BeginScope(context.TaskId);
 
             if (_configuration.SmtpClient.Enable ?? true)
             {
@@ -405,7 +414,7 @@ namespace EmailMassSender.Service
 
         private bool IsReadyToProcess(EmailMassSendingTaskItem item)
         {
-            return (item.Attempt == null || (item.Attempt != null && item.Failed)) && IsNotObsolete(item);
+            return (item.Attempt == null || (item.Failed)) && IsNotObsolete(item);
         }
 
         private bool IsNotObsolete(EmailMassSendingTaskItem item)

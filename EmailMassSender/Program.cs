@@ -29,6 +29,7 @@ namespace EmailMassSender
                 var configurationBuilder = new ConfigurationBuilder()
                     .SetBasePath(Directory.GetCurrentDirectory())
                     .AddJsonFile("appsettings.json", false, false)
+                    .AddJsonFile(configuration.UserSettingsFilePath ?? "usersettings.json", false, false)
                     .AddCommandLine(args);
 
                 var configBuilt = configurationBuilder
@@ -38,20 +39,17 @@ namespace EmailMassSender
 
                 loggerFactory = LoggerFactory.Create((builder) =>
                     builder.AddConfiguration(configBuilt.GetSection("Logging")).AddConsole());
-
-                var configBuilder2 = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory())
-                    .AddJsonFile(configuration.UserSettingsFilePath ?? "usersettings.json", false, false);
-
-                configBuilder2.Build().Bind(configuration);
             }
             catch (Exception e)
             {
-                Console.Error.WriteLine("Loading settings failed!");
-                Console.Error.WriteLine(e.ToString());
+                await Console.Error.WriteLineAsync("Loading settings failed!");
+                await Console.Error.WriteLineAsync(e.ToString());
                 return 1;
             }
 
             var logger = loggerFactory.CreateLogger("Host");
+
+            logger.LogInformation("Starting host.");
 
             var service =
                 new EmailMassSendingService(configuration, loggerFactory.CreateLogger("EmailMassSendingService"));

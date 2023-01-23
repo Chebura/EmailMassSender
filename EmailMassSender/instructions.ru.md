@@ -10,3 +10,4 @@
 * Что это такое
 * Настройка SMTP
 
+ems --DefaultGroups=Test
