@@ -55,7 +55,10 @@ namespace EmailMassSender.Service
             }
 
             if (_configuration.SmtpClient == null)
+            {
+                await CloseTasksAsync(tasks);
                 throw new InvalidOperationException("There are no SmtpClient object in configuration. Sending failed.");
+            }
 
             _logger.LogDebug($"Start processing tasks at {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss tt zz}");
 
@@ -106,6 +109,11 @@ namespace EmailMassSender.Service
             if (cancellationToken.IsCancellationRequested)
                 _logger.LogDebug("Cancellation requested");
 
+            await CloseTasksAsync(tasks);
+        }
+
+        private static async Task CloseTasksAsync(IEnumerable<EmailMassSendingTaskContext> tasks)
+        {
             foreach (var task in tasks.Where(x => x.File != null))
             {
                 try
