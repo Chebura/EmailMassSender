@@ -61,12 +61,16 @@ namespace EmailMassSender.Service
 
             try
             {
+                _logger.LogTrace("0");
                 while (!cancellationToken.IsCancellationRequested)
                 {
+                    _logger.LogTrace("1");
                     foreach (var task in tasks)
                     {
+                        _logger.LogTrace("2");
                         try
                         {
+                            _logger.LogTrace("3");
                             using var scope = _logger.BeginScope(task.TaskId);
                             var t = await ProcessTaskAsync(task, cancellationToken);
                             var s = task.Success ? "SUCCESS" : "ERROR";
@@ -167,7 +171,7 @@ namespace EmailMassSender.Service
 
             var buffer = new byte[file.Length];
 
-            await file.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
+            await file.ReadExactlyAsync(buffer, cancellationToken);
 
             using var md5 = MD5.Create();
 
@@ -264,12 +268,12 @@ namespace EmailMassSender.Service
             CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            
+            _logger.LogTrace("Reading file");
 
             var buffer = new byte[context.File.Length];
-
             context.File.Position = 0;
-
-            await context.File.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
+            await context.File.ReadExactlyAsync(buffer, cancellationToken);
 
             var taskList = JsonConvert.DeserializeObject<EmailMassSendingTask>(Encoding.UTF8.GetString(buffer));
 
@@ -297,18 +301,17 @@ namespace EmailMassSender.Service
             for (var i = 0; i < taskItems.Count; i++)
                 partedTaskItems[i % threadsCount].Add(q.Dequeue());
 
-            Parallel.ForEach(partedTaskItems, new ParallelOptions
+            _logger.LogTrace("Begin parallel processing");
+
+            await Parallel.ForEachAsync(partedTaskItems, new ParallelOptions
                 {
-                    MaxDegreeOfParallelism = threadsCount
+                    MaxDegreeOfParallelism = threadsCount,
+                    CancellationToken = cancellationToken
                 },
-                (b) =>
-                {
-                    if (cancellationToken.IsCancellationRequested)
-                        return;
-                    ProcessTaskItemsAsync(context, b, cancellationToken).GetAwaiter().GetResult();
-                });
+                async (b, ct) => await ProcessTaskItemsAsync(context, b, ct));
 
-
+            _logger.LogTrace("Begin parallel processing done.");
+            
             buffer = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(taskList, Formatting.Indented));
 
             context.File.Position = 0;
@@ -318,7 +321,9 @@ namespace EmailMassSender.Service
 
             await context.File.FlushAsync(cancellationToken);
 
-            context.Success = allTaskItems.All(x => !IsNotObsolete(x) || (!x.Failed && x.Attempt != null));
+            _logger.LogTrace("Writing file done.");
+
+            context.Success = allTaskItems.All(x => IsDead(x) || (!x.Failed && x.Attempt != null));
             context.Total = taskItems.Count;
             context.Sent = taskItems.Count(x => x.Attempt != null && !x.Failed);
             context.Failed = context.Total - context.Sent;
@@ -331,6 +336,8 @@ namespace EmailMassSender.Service
         {
             if (!items.Any())
                 return;
+
+            _logger.LogTrace("Processing task `{taskId}` items", context.TaskId);
 
             var delay = _configuration.DelayBetweenSendsInThread ?? TimeSpan.Zero;
 
@@ -349,6 +356,8 @@ namespace EmailMassSender.Service
         private async Task ProcessTaskItemAsync(EmailMassSendingTaskContext context,
             EmailMassSendingTaskItem item, CancellationToken cancellationToken)
         {
+            _logger.LogTrace("Processing task `{taskId}` item: {item}", context.TaskId, item.Receiver);
+
             item.AttemptsLeft--;
             item.Attempt = DateTimeOffset.UtcNow;
 
@@ -366,6 +375,7 @@ namespace EmailMassSender.Service
 
             if (_configuration.SmtpClient.Enable ?? true)
             {
+                _logger.LogTrace("Sending to {item}", item.Receiver);
                 try
                 {
                     using var client = new SmtpClient();
@@ -414,21 +424,31 @@ namespace EmailMassSender.Service
 
         private bool IsReadyToProcess(EmailMassSendingTaskItem item)
         {
-            return (item.Attempt == null || (item.Failed)) && IsNotObsolete(item);
-        }
-
-        private bool IsNotObsolete(EmailMassSendingTaskItem item)
-        {
-            if (item.AttemptsLeft == 0)
+            if (item.Attempt != null && !item.Failed)
                 return false;
 
+            if (IsDead(item))
+                return false;
+
+            // Waiting for the next retry attempt.
             if (item.WaitFor != null && DateTimeOffset.Compare(item.WaitFor.Value, DateTimeOffset.UtcNow) > 0)
                 return false;
 
-            if (DateTimeOffset.Compare(item.Lifetime, DateTimeOffset.UtcNow) < 0)
-                return false;
-
             return true;
+        }
+
+        /// <summary>
+        /// Item will never be processed again: attempts are exhausted or its lifetime is expired.
+        /// </summary>
+        private bool IsDead(EmailMassSendingTaskItem item)
+        {
+            if (item.AttemptsLeft <= 0)
+                return true;
+
+            if (DateTimeOffset.Compare(item.Lifetime, DateTimeOffset.UtcNow) < 0)
+                return true;
+
+            return false;
         }
     }
 }
