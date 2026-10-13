@@ -286,7 +286,10 @@ namespace EmailMassSender.Service
             if (!taskItems.Any())
             {
                 _logger.LogDebug($"No task items to process.");
-                context.Success = true;
+                context.Success = IsCompleted(allTaskItems);
+                context.Total = 0;
+                context.Sent = 0;
+                context.Failed = 0;
                 return context;
             }
 
@@ -323,7 +326,7 @@ namespace EmailMassSender.Service
 
             _logger.LogTrace("Writing file done.");
 
-            context.Success = allTaskItems.All(x => IsDead(x) || (!x.Failed && x.Attempt != null));
+            context.Success = IsCompleted(allTaskItems);
             context.Total = taskItems.Count;
             context.Sent = taskItems.Count(x => x.Attempt != null && !x.Failed);
             context.Failed = context.Total - context.Sent;
@@ -420,6 +423,15 @@ namespace EmailMassSender.Service
                 item.Failed = false;
                 item.Failure = "Not sent (disabled)";
             }
+        }
+
+        /// <summary>
+        /// All items are either sent or will never be processed again.
+        /// Items waiting for the next retry attempt are not completed.
+        /// </summary>
+        private bool IsCompleted(IEnumerable<EmailMassSendingTaskItem> items)
+        {
+            return items.All(x => IsDead(x) || (!x.Failed && x.Attempt != null));
         }
 
         private bool IsReadyToProcess(EmailMassSendingTaskItem item)
