@@ -31,5 +31,12 @@ Just run `ems.exe` (or run `./dotnet ems.dll` for Linux).
 
 Read [instructions](./EmailMassSender/README.md). 
 
+# Tests
+```CMD
+> dotnet test --solution EmailMassSenderSln.sln
+```
+
+See [EmailMassSender.Tests/README.md](./EmailMassSender.Tests/README.md) (in Russian).
+
 # Credits
 Created by Kalianov Dmitry (https://chebura.github.io, http://mrald.narod.ru)
