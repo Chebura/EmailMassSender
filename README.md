@@ -5,8 +5,8 @@ Email Mass sender.
 Read [EULA](./EULA.txt).
 
 # Pre-requesties
-Install Microsoft .NET 5.0.4 for your OS:  
-https://dotnet.microsoft.com/download/dotnet/5.0
+Install Microsoft .NET 10 SDK for your OS:  
+https://dotnet.microsoft.com/download/dotnet/10.0
 
 # Build and run
 Open cmd shell int `EmailMassSenderSln` directory and type:
@@ -15,7 +15,7 @@ Open cmd shell int `EmailMassSenderSln` directory and type:
 > dotnet build
 ```
 
-Go to `./EmailMassSender/bin/Debug/net5.0/[CONFIG]`  
+Go to `./EmailMassSender/bin/Debug/net10.0/[CONFIG]`  
 
 Open `appsettings.json`.
 
